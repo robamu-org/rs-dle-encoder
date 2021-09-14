@@ -1,3 +1,5 @@
+use std::io::Read;
+
 pub struct DleEncoder {
     escape_stx_etx: bool,
     escape_cr: bool
@@ -27,7 +29,14 @@ impl DleEncoder {
     }
 
     /// This method decodes an ASCII DLE encoded byte stream
-    pub fn decode() {
+    pub fn decode_bytestream(
+        source_stream: &[u8], source_len: usize, dest_stream: &mut[u8],
+        max_dest_size: usize
+    ) -> Result<(usize, usize), DleError> {
+        Ok((0,0))
+    }
+
+    pub fn decode_from_reader(source: &impl std::io::Read) {
 
     }
 }
