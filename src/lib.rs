@@ -29,7 +29,7 @@ impl DleEncoder {
     }
 
     /// This method decodes an ASCII DLE encoded byte stream
-    pub fn decode_bytestream(
+    pub fn decode(
         source_stream: &[u8], source_len: usize, dest_stream: &mut[u8],
         max_dest_size: usize
     ) -> Result<(usize, usize), DleError> {
