@@ -5,12 +5,14 @@ const ETX_CHAR: u8 = 0x03;
 const DLE_CHAR: u8 = 0x10;
 const CR_CHAR: u8 = 0x0d;
 
+#[derive(Copy, Clone)]
 pub struct DleEncoder {
     pub escape_stx_etx: bool,
     pub escape_cr: bool,
     pub add_stx_etx: bool
 }
 
+#[derive(Debug)]
 pub enum DleError {
     StreamTooShort,
     DecodingError
@@ -28,40 +30,82 @@ impl Default for DleEncoder {
 
 impl DleEncoder {
 
-    /// This method encodes a given byte stream with ASCII based DLE encoding
+    /// This method encodes a given byte stream with ASCII based DLE encoding.
+    /// It returns the number of encoded bytes or a DLE error code.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source_stream` - The stream to encode
+    /// * `dest_stream` - Encoded stream will be written here
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use rs_dle_encoder::DleEncoder;
+    /// 
+    /// let dle_encoder = DleEncoder::default();
+    /// let mut encoding_buffer: [u8; 16] = [0; 16];
+    /// let example_array: [u8; 3] = [0, 0x02, 0x10];
+    /// 
+    /// let encode_result = dle_encoder.encode(
+    ///     &example_array, &mut encoding_buffer
+    /// );
+    /// assert!(encode_result.is_ok());
+    /// let encoded_len = encode_result.unwrap();
+    /// assert_eq!(encoded_len, 7);
+    /// 
+    /// println!("Source buffer: {:?}", example_array);
+    /// println!("Encoded stream: {:?}", &encoding_buffer[ .. encoded_len])
+    /// ```
     pub fn encode(&self,
-        source_stream: &[u8], source_len: usize, dest_stream: &mut[u8],
-        max_dest_len: usize
+        source_stream: &[u8], dest_stream: &mut[u8]
     ) -> Result<usize, DleError> {
         if self.escape_stx_etx {
             return self.encode_escaped(
-                source_stream, source_len, dest_stream, max_dest_len
+                source_stream, dest_stream
             )
         }
         else {
             return self.encode_non_escaped(
-                source_stream, source_len, dest_stream, max_dest_len
+                source_stream, dest_stream
             )
         }
     }
 
     pub fn encode_escaped(&self,
-        source_stream: &[u8], source_len: usize, dest_stream: &mut[u8],
-        max_dest_len: usize
+        source_stream: &[u8], dest_stream: &mut[u8]
     ) -> Result<usize, DleError> {
         let mut encoded_idx = 0;
         let mut source_idx = 0;
+        let max_dest_len = dest_stream.len();
         if self.add_stx_etx {
             if max_dest_len < 1 {
                 return Err(DleError::StreamTooShort)
             }
-            dest_stream[encoded_idx] = STX_CHAR
+            dest_stream[encoded_idx] = STX_CHAR;
+            encoded_idx += 1;
         }
-        while encoded_idx < max_dest_len && source_idx < source_len {
+        while encoded_idx < max_dest_len && source_idx < source_stream.len() {
             let next_byte = source_stream[source_idx];
             if next_byte == STX_CHAR || next_byte == ETX_CHAR || 
                 (self.escape_cr && next_byte == CR_CHAR) {
                 if encoded_idx + 1 > max_dest_len {
+                    return Err(DleError::StreamTooShort)
+                }
+                else {
+                    dest_stream[encoded_idx] = DLE_CHAR;
+                    encoded_idx += 1;
+                    // Next byte will be the actual byte + 0x40. This prevents STX and ETX from
+                    // appearin in the encoded data stream at all, so when polling an encoded
+                    // stream, the transmission can be stopped at ETX. 0x40 was chose at random
+                    // with special requirements:
+                    // - Prevent going from one control char to another
+                    // - Prevent overflow for common characters
+                    dest_stream[encoded_idx] =next_byte + 0x40;
+                }
+            }
+            else if next_byte == DLE_CHAR {
+                if encoded_idx + 1 >= max_dest_len {
                     return Err(DleError::StreamTooShort)
                 }
                 else {
@@ -77,7 +121,7 @@ impl DleEncoder {
             source_idx += 1;
         }
 
-        if source_idx == source_len {
+        if source_idx == source_stream.len() {
             if self.add_stx_etx {
                 if encoded_idx + 1 >= max_dest_len {
                     return Err(DleError::StreamTooShort)
@@ -92,23 +136,23 @@ impl DleEncoder {
         }
     }
 
-    pub fn encode_non_escaped(&self, 
-        source_stream: &[u8], source_len: usize, dest_stream: &mut[u8],
-        max_dest_len: usize
+    pub fn encode_non_escaped(
+        &self, source_stream: &[u8], dest_stream: &mut[u8]
     )-> Result<usize, DleError> {
         let mut encoded_idx = 0;
         let mut source_idx = 0;
+        let max_dest_len = dest_stream.len();
         if self.add_stx_etx {
             if max_dest_len < 2 {
                 return Err(DleError::StreamTooShort)
             }
             dest_stream[encoded_idx] = DLE_CHAR;
             encoded_idx += 1;
-            dest_stream[encoded_idx] = DLE_CHAR;
+            dest_stream[encoded_idx] = STX_CHAR;
             encoded_idx += 1;
         }
 
-        while encoded_idx < max_dest_len && source_idx < source_len {
+        while encoded_idx < max_dest_len && source_idx < source_stream.len() {
             let next_byte = source_stream[source_idx];
             if next_byte == DLE_CHAR {
                 if encoded_idx + 1 >= max_dest_len {
@@ -127,14 +171,14 @@ impl DleEncoder {
             source_idx += 1;
         }
 
-        if source_idx == source_len {
+        if source_idx == source_stream.len() {
             if self.add_stx_etx {
                 if encoded_idx + 2 >= max_dest_len {
                     return Err(DleError::StreamTooShort)
                 }
                 dest_stream[encoded_idx] = DLE_CHAR;
                 encoded_idx += 1;
-                dest_stream[encoded_idx] = DLE_CHAR;
+                dest_stream[encoded_idx] = ETX_CHAR;
                 encoded_idx += 1;
             }
             Ok(encoded_idx)
@@ -299,4 +343,75 @@ impl DleEncoder {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    const TEST_ARRAY_0: &[u8] = &[0, 0, 0, 0, 0];
+    const TEST_ARRAY_1: &[u8] = &[0, DLE_CHAR, 5];
+    const TEST_ARRAY_2: &[u8] = &[0, STX_CHAR, 5];
+    const TEST_ARRAY_3: &[u8] = &[0, CR_CHAR, ETX_CHAR];
+    const TEST_ARRAY_4: &[u8] = &[DLE_CHAR, ETX_CHAR, STX_CHAR];
+    
+    const TEST_ARRAY_0_ENCODED_ESCPAED: &[u8] = &[
+        STX_CHAR, 0, 0, 0, 0, 0, ETX_CHAR
+    ];
+    const TEST_ARRAY_0_ENCODED_NON_ESCPAED: &[u8] = &[
+        DLE_CHAR, STX_CHAR, 0, 0, 0, 0, 0, DLE_CHAR, ETX_CHAR
+    ];
+
+    const TEST_ARRAY_1_ENCODED_ESCPAED: &[u8] = &[
+        STX_CHAR, 0, DLE_CHAR, DLE_CHAR, 5, ETX_CHAR
+    ];
+    const TEST_ARRAY_1_ENCODED_NON_ESCPAED: &[u8] = &[
+        DLE_CHAR, STX_CHAR, 0, DLE_CHAR, DLE_CHAR, 5, DLE_CHAR, ETX_CHAR
+    ];
+
+    const TEST_ARRAY_2_ENCODED_ESCPAED: &[u8] = &[
+        STX_CHAR, 0, DLE_CHAR, STX_CHAR + 0x40, 5, ETX_CHAR
+    ];
+    const TEST_ARRAY_2_ENCODED_NON_ESCPAED: &[u8] = &[
+        DLE_CHAR, STX_CHAR, 0, STX_CHAR, 5, DLE_CHAR, ETX_CHAR
+    ];
+
+    const TEST_ARRAY_3_ENCODED_ESCPAED: &[u8] = &[
+        STX_CHAR, 0, CR_CHAR, DLE_CHAR, ETX_CHAR + 0x40, ETX_CHAR
+    ];
+    const TEST_ARRAY_3_ENCODED_NON_ESCPAED: &[u8] = &[
+        DLE_CHAR, STX_CHAR, 0, CR_CHAR, ETX_CHAR, DLE_CHAR, ETX_CHAR
+    ];
+
+    const TEST_ARRAY_4_ENCODED_ESCPAED: &[u8] = &[
+        STX_CHAR, DLE_CHAR, DLE_CHAR, DLE_CHAR, ETX_CHAR + 0x40, DLE_CHAR, 
+        STX_CHAR + 0x40, ETX_CHAR
+    ];
+    const TEST_ARRAY_4_ENCODED_NON_ESCPAED: &[u8] = &[
+        DLE_CHAR, STX_CHAR, DLE_CHAR, DLE_CHAR, ETX_CHAR, STX_CHAR, DLE_CHAR, ETX_CHAR
+    ];
+
+    #[test]
+    fn test_encoder() {
+        let mut dle_encoder = DleEncoder::default();
+        let mut buffer: [u8; 32] = [0; 32];
+        let mut test_encode_closure = |
+            dle_encoder: &DleEncoder, buf_to_encode: &[u8], expected_buf: &[u8]| {
+            let encode_res = dle_encoder.encode(buf_to_encode, &mut buffer);
+            assert!(encode_res.is_ok());
+            for (idx, byte) in expected_buf.iter().enumerate() {
+                assert_eq!(buffer[idx], *byte);
+            }
+            assert_eq!(encode_res.unwrap(), expected_buf.len());
+        };
+
+        test_encode_closure(&dle_encoder, TEST_ARRAY_0, TEST_ARRAY_0_ENCODED_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_1, TEST_ARRAY_1_ENCODED_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_2, TEST_ARRAY_2_ENCODED_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_3, TEST_ARRAY_3_ENCODED_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_4, TEST_ARRAY_4_ENCODED_ESCPAED);
+
+        dle_encoder.escape_stx_etx = false;
+        test_encode_closure(&dle_encoder, TEST_ARRAY_0, TEST_ARRAY_0_ENCODED_NON_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_1, TEST_ARRAY_1_ENCODED_NON_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_2, TEST_ARRAY_2_ENCODED_NON_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_3, TEST_ARRAY_3_ENCODED_NON_ESCPAED);
+        test_encode_closure(&dle_encoder, TEST_ARRAY_4, TEST_ARRAY_4_ENCODED_NON_ESCPAED);
+    }
 }
