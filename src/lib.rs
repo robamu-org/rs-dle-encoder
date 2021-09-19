@@ -296,3 +296,7 @@ impl DleEncoder {
 
     }
 }
+
+#[cfg(test)]
+mod tests {
+}
