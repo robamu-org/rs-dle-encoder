@@ -7,15 +7,6 @@ You can find a C++ implementation
 [here](https://egit.irs.uni-stuttgart.de/fsfw/fsfw/src/branch/development/src/fsfw/globalfunctions/DleEncoder.cpp)
 and a Python implementation [here](https://github.com/robamu-org/py-dle-encoder).
 
-# Usage
-
-Add the following lines to your `Cargo.toml`
-
-```toml
-[dependencies]
-dle_encoder = "0.1.1"
-```
-
 # Encoder Modes
 
 ## Escaped mode
