@@ -1,6 +1,6 @@
 [package]
-name = "rs-dle-encoder"
-version = "0.1.0"
+name = "dle-encoder"
+version = "0.1.1"
 authors = ["Robin Mueller <robin.mueller.m@gmail.com>"]
 edition = "2018"
 license = "Apache-2.0"

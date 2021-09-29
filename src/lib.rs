@@ -5,10 +5,16 @@ const ETX_CHAR: u8 = 0x03;
 const DLE_CHAR: u8 = 0x10;
 const CR_CHAR: u8 = 0x0d;
 
+/// This struct is used to create a DleEncoder instance. It can also
+/// be used to configure the encoder
 #[derive(Copy, Clone)]
 pub struct DleEncoder {
+    /// Configure whether the encoder uses the escaped or non-escaped mode
     pub escape_stx_etx: bool,
+    /// It is possible to escape CR characters as well in the escaped mode
     pub escape_cr: bool,
+    /// Configure the encoder to not add STX and ETX characters at the start
+    /// and end when encoding
     pub add_stx_etx: bool
 }
 
@@ -41,7 +47,7 @@ impl DleEncoder {
     /// # Examples
     /// 
     /// ```
-    /// use rs_dle_encoder::DleEncoder;
+    /// use dle_encoder::DleEncoder;
     /// 
     /// let dle_encoder = DleEncoder::default();
     /// let mut encoding_buffer: [u8; 16] = [0; 16];
@@ -72,6 +78,14 @@ impl DleEncoder {
         }
     }
 
+    /// This method encodes a given byte stream with ASCII based DLE encoding.
+    /// It explicitely does so in the escaped mode, which is the default
+    /// mode.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source_stream` - The stream to encode
+    /// * `dest_stream` - Encoded stream will be written here
     pub fn encode_escaped(&self,
         source_stream: &[u8], dest_stream: &mut[u8]
     ) -> Result<usize, DleError> {
@@ -136,6 +150,33 @@ impl DleEncoder {
         }
     }
 
+    /// This method encodes a given byte stream with ASCII based DLE encoding.
+    /// It explicitely does so in the non-escaped mode.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source_stream` - The stream to encode
+    /// * `dest_stream` - Encoded stream will be written here
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// use dle_encoder::DleEncoder;
+    /// 
+    /// let dle_encoder = DleEncoder::default();
+    /// let mut encoding_buffer: [u8; 16] = [0; 16];
+    /// let example_array: [u8; 3] = [0, 0x02, 0x10];
+    /// 
+    /// let encode_result = dle_encoder.encode_non_escaped(
+    ///     &example_array, &mut encoding_buffer
+    /// );
+    /// assert!(encode_result.is_ok());
+    /// let encoded_len = encode_result.unwrap();
+    /// assert_eq!(encoded_len, 8);
+    /// 
+    /// println!("Source buffer: {:?}", example_array);
+    /// println!("Encoded stream: {:?}", &encoding_buffer[ .. encoded_len])
+    /// ```
     pub fn encode_non_escaped(
         &self, source_stream: &[u8], dest_stream: &mut[u8]
     )-> Result<usize, DleError> {
@@ -189,23 +230,64 @@ impl DleEncoder {
         }
     }
 
-    /// This method decodes an ASCII DLE encoded byte stream
+    /// This method decodes a given byte stream which was encoded with a ASCII
+    /// DLE encoder. It explicitely does so in the escaped mode, which is the default
+    /// mode. It returns the length of the decoded buffer or an error code if
+    /// there is a decoder failure or the destination stream is too short.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source_stream` - The stream to decode
+    /// * `dest_stream` - Decoded stream will be written here
+    /// * `read_len` - The number of read bytes in the source stream will be
+    ///   assigned to this variable
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use dle_encoder::DleEncoder;
+    /// 
+    /// let dle_encoder = DleEncoder::default();
+    /// let mut decoding_buffer: [u8; 16] = [0; 16];
+    /// let encoded_array: [u8; 4] = [0x02, 0x10, 0x02 + 0x40, 0x03];
+    /// let mut read_len = 0;
+    /// let decode_result = dle_encoder.decode(
+    ///     &encoded_array, &mut decoding_buffer, &mut read_len
+    /// );
+    /// assert!(decode_result.is_ok());
+    /// let decoded_len = decode_result.unwrap();
+    /// assert_eq!(decoded_len, 1);
+    /// 
+    /// println!("Source buffer: {:?}", encoded_array);
+    /// println!("Encoded stream: {:?}", &decoding_buffer[ .. decoded_len])
+    /// ```
     pub fn decode(&self,
         source_stream: &[u8], dest_stream: &mut[u8], read_len: &mut usize
     ) -> Result<usize, DleError> {
         if self.escape_stx_etx {
-            return self.decode_escaped_stream(
+            return self.decode_escaped(
                 source_stream, dest_stream, read_len
             )
         }
         else {
-            return self.decode_non_escaped_stream(
+            return self.decode_non_escaped(
                 source_stream, dest_stream, read_len
             )
         }
     }
 
-    pub fn decode_escaped_stream(&self, 
+    /// This method decodes a given byte stream which was encoded with a ASCII
+    /// DLE encoder. It explicitely does so in the escaped mode, which is the default
+    /// mode. It returns the length of the decoded buffer or an error code if
+    /// there is a decoder failure or the destination stream is too short.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source_stream` - The stream to decode
+    /// * `dest_stream` - Decoded stream will be written here
+    /// * `read_len` - The number of read bytes in the source stream will be
+    ///   assigned to this variable
+    pub fn decode_escaped(&self,
         source_stream: &[u8], dest_stream: &mut[u8], read_len: &mut usize
     ) -> Result<usize, DleError> {
         let mut encoded_idx = 0;
@@ -269,7 +351,38 @@ impl DleEncoder {
         }
     }
 
-    pub fn decode_non_escaped_stream(&self, 
+    /// This method decodes a given byte stream which was encoded with a ASCII
+    /// DLE encoder. It explicitely does so in the non-escaped mode.
+    /// It returns the length of the decoded buffer or an error code if
+    /// there is a decoder failure or the destination stream is too short.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_stream` - The stream to decode
+    /// * `dest_stream` - Decoded stream will be written here
+    /// * `read_len` - The number of read bytes in the source stream will be
+    ///   assigned to this variable
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use dle_encoder::DleEncoder;
+    /// 
+    /// let dle_encoder = DleEncoder::default();
+    /// let mut decoding_buffer: [u8; 16] = [0; 16];
+    /// let encoded_array: [u8; 6] = [0x10, 0x02, 0x02, 0x03, 0x10, 0x03];
+    /// let mut read_len = 0;
+    /// let decode_result = dle_encoder.decode_non_escaped(
+    ///     &encoded_array, &mut decoding_buffer, &mut read_len
+    /// );
+    /// assert!(decode_result.is_ok());
+    /// let decoded_len = decode_result.unwrap();
+    /// assert_eq!(decoded_len, 2);
+    /// 
+    /// println!("Source buffer: {:?}", encoded_array);
+    /// println!("Encoded stream: {:?}", &decoding_buffer[ .. decoded_len])
+    /// ```
+    pub fn decode_non_escaped(&self,
         source_stream: &[u8], dest_stream: &mut[u8], read_len: &mut usize
     ) -> Result<usize, DleError> {
         let mut encoded_idx = 0;
@@ -519,5 +632,15 @@ mod tests {
         test_array_1_encoded_faulty[5] = prev_val;
         test_array_1_encoded_faulty[2] = 0;
         test_faulty_decoding(&dle_encoder, &test_array_1_encoded_faulty, &mut buffer);
+
+        let mut decoding_buffer: [u8; 16] = [0; 16];
+        let encoded_array: [u8; 4] = [0x02, 0x10, 0x02 + 0x40, 0x03];
+        let mut read_len = 0;
+        let decode_result = dle_encoder.decode(
+            &encoded_array, &mut decoding_buffer, &mut read_len
+        );
+        assert!(decode_result.is_ok());
+        let decoded_len = decode_result.unwrap();
+        assert_eq!(decoded_len, 1);
     }
 }
