@@ -514,5 +514,9 @@ mod tests {
         prev_val = test_array_1_encoded_faulty[5];
         test_array_1_encoded_faulty[5] = 0;
         test_faulty_decoding(&dle_encoder, &test_array_1_encoded_faulty, &mut buffer);
+
+        test_array_1_encoded_faulty[5] = prev_val;
+        test_array_1_encoded_faulty[2] = 0;
+        test_faulty_decoding(&dle_encoder, &test_array_1_encoded_faulty, &mut buffer);
     }
 }
