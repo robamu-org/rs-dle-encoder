@@ -3,6 +3,12 @@ name = "rs-dle-encoder"
 version = "0.1.0"
 authors = ["Robin Mueller <robin.mueller.m@gmail.com>"]
 edition = "2018"
+license = "Apache-2.0"
+description = "DLE ASCII encoder and transport layer for Rust"
+homepage = "https://github.com/robamu-org/rs-dle-encoder"
+repository = "https://github.com/robamu-org/rs-dle-encoder"
+keywords = ["encoding", "ascii", "transport", "decoding", "dle"]
+categories = ["encoding"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

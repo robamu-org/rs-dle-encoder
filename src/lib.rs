@@ -336,6 +336,7 @@ impl DleEncoder {
         }
     }
 
+    // TODO: Implement for the generic Read Trait
     //pub fn decode_from_reader(source: &impl std::io::Read) {}
 }
 
