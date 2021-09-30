@@ -1,3 +1,6 @@
+![Crates.io](https://img.shields.io/crates/v/dle-encoder)
+[![Package](https://github.com/robamu-org/rs-dle-encoder/actions/workflows/rust.yml/badge.svg)](https://github.com/robamu-org/rs-dle-encoder/actions/workflows/rust.yml)
+
 DLE Encoder for Rust
 ======
 
