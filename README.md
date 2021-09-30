@@ -1,4 +1,4 @@
-[![Crates.io](https://img.shields.io/crates/v/dle-encoder)](https://docs.rs/dle-encoder/)
+[![Crates.io](https://img.shields.io/crates/v/dle-encoder)](https://crates.io/crates/dle-encoder)
 [![Package](https://github.com/robamu-org/rs-dle-encoder/actions/workflows/rust.yml/badge.svg)](https://github.com/robamu-org/rs-dle-encoder/actions/workflows/rust.yml)
 [![docs.rs](https://img.shields.io/docsrs/dle-encoder)](https://docs.rs/dle-encoder)
 
