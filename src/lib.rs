@@ -67,14 +67,10 @@ impl DleEncoder {
         source_stream: &[u8], dest_stream: &mut[u8]
     ) -> Result<usize, DleError> {
         if self.escape_stx_etx {
-            return self.encode_escaped(
-                source_stream, dest_stream
-            )
+            self.encode_escaped(source_stream, dest_stream)
         }
         else {
-            return self.encode_non_escaped(
-                source_stream, dest_stream
-            )
+            self.encode_non_escaped(source_stream, dest_stream)
         }
     }
 
@@ -146,7 +142,7 @@ impl DleEncoder {
             Ok(encoded_idx)
         }
         else {
-            return Err(DleError::StreamTooShort)
+            Err(DleError::StreamTooShort)
         }
     }
 
@@ -265,14 +261,10 @@ impl DleEncoder {
         source_stream: &[u8], dest_stream: &mut[u8], read_len: &mut usize
     ) -> Result<usize, DleError> {
         if self.escape_stx_etx {
-            return self.decode_escaped(
-                source_stream, dest_stream, read_len
-            )
+            self.decode_escaped(source_stream, dest_stream, read_len)
         }
         else {
-            return self.decode_non_escaped(
-                source_stream, dest_stream, read_len
-            )
+            self.decode_non_escaped(source_stream, dest_stream, read_len)
         }
     }
 
@@ -315,16 +307,14 @@ impl DleEncoder {
                 if next_byte == DLE_CHAR {
                     dest_stream[decoded_idx] = next_byte;
                 }
-                else {
-                    if next_byte == STX_CHAR + 0x40 ||
+                else if next_byte == STX_CHAR + 0x40 ||
                             next_byte == ETX_CHAR + 0x40 ||
                             (self.escape_cr && next_byte == CR_CHAR + 0x40) {
                         dest_stream[decoded_idx] = next_byte - 0x40;
                     }
-                    else {
-                        *read_len = encoded_idx + 2;
-                        return Err(DleError::DecodingError)
-                    }
+                else {
+                    *read_len = encoded_idx + 2;
+                    return Err(DleError::DecodingError)
                 }
                 encoded_idx += 1
             }
@@ -338,11 +328,11 @@ impl DleEncoder {
         if source_stream[encoded_idx] != ETX_CHAR {
             if decoded_idx == dest_stream_len {
                 *read_len = 0;
-                return Err(DleError::StreamTooShort)
+                Err(DleError::StreamTooShort)
             }
             else {
                 *read_len = encoded_idx + 1;
-                return Err(DleError::DecodingError)
+                Err(DleError::DecodingError)
             }
         }
         else {
@@ -441,11 +431,11 @@ impl DleEncoder {
             // So far we did not find anything wrong here, let the user try
             // again
             *read_len = 0;
-            return Err(DleError::StreamTooShort)
+            Err(DleError::StreamTooShort)
         }
         else {
             *read_len = encoded_idx;
-            return Err(DleError::DecodingError)
+            Err(DleError::DecodingError)
         }
     }
 
