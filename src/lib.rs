@@ -1,9 +1,9 @@
 // use std::io::Read;
 
-const STX_CHAR: u8 = 0x02;
-const ETX_CHAR: u8 = 0x03;
-const DLE_CHAR: u8 = 0x10;
-const CR_CHAR: u8 = 0x0d;
+pub const STX_CHAR: u8 = 0x02;
+pub const ETX_CHAR: u8 = 0x03;
+pub const DLE_CHAR: u8 = 0x10;
+pub const CR_CHAR: u8 = 0x0d;
 
 /// This struct is used to create a DleEncoder instance. It can also
 /// be used to configure the encoder
